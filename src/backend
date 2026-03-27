@@ -1,0 +1,32 @@
+import Time "mo:core/Time";
+import List "mo:core/List";
+import Principal "mo:core/Principal";
+
+actor {
+  type ContactMessage = {
+    name : Text;
+    email : Text;
+    message : Text;
+    timestamp : Time.Time;
+  };
+
+  let contactMessages = List.empty<ContactMessage>();
+
+  public type ContactMessageInput = {
+    name : Text;
+    email : Text;
+    message : Text;
+  };
+
+  public shared ({ caller }) func submitContact(input : ContactMessageInput) : async () {
+    let message : ContactMessage = {
+      input with
+      timestamp = Time.now();
+    };
+    contactMessages.add(message);
+  };
+
+  public query ({ caller }) func getAllContacts() : async [ContactMessage] {
+    contactMessages.toArray();
+  };
+};
