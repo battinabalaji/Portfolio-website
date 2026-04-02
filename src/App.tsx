@@ -1,5 +1,4 @@
 import { Toaster } from "@/components/ui/sonner";
-import { useMutation } from "@tanstack/react-query";
 import {
   Award,
   BookOpen,
@@ -14,7 +13,6 @@ import {
   GraduationCap,
   Layout,
   Linkedin,
-  Loader2,
   Mail,
   MapPin,
   Play,
@@ -27,7 +25,6 @@ import {
 import { AnimatePresence, motion, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useActor } from "./hooks/useActor";
 
 const NAV_LINKS = [
   { label: "Home", href: "#home" },
@@ -217,7 +214,6 @@ const ACHIEVEMENTS = [
   },
 ];
 
-// Deterministic particles (no Math.random to avoid hydration issues)
 const PARTICLES = Array.from({ length: 15 }, (_, i) => ({
   id: i,
   left: `${5 + ((i * 6.3) % 88)}%`,
@@ -338,7 +334,8 @@ export default function App() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [tilts, setTilts] = useState(PROJECTS.map(() => ({ x: 0, y: 0 })));
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
-  const { actor } = useActor();
+  const [formSent, setFormSent] = useState(false);
+  const [formSending, setFormSending] = useState(false);
   const scrolled = useScrolled();
   const role = useTypewriter([
     "ML Engineer",
@@ -346,7 +343,6 @@ export default function App() {
     "AI & ML Student",
   ]);
 
-  // Cursor tracker
   useEffect(() => {
     const handler = (e: MouseEvent) =>
       setMousePos({ x: e.clientX, y: e.clientY });
@@ -372,28 +368,6 @@ export default function App() {
     setTilts((prev) => prev.map((t, i) => (i === idx ? { x: 0, y: 0 } : t)));
   };
 
-  const submitMutation = useMutation({
-    mutationFn: async (data: {
-      name: string;
-      email: string;
-      message: string;
-    }) => {
-      if (!actor) throw new Error("Not connected");
-      await actor.submitContact({
-        name: data.name,
-        email: data.email,
-        message: data.message,
-      });
-    },
-    onSuccess: () => {
-      toast.success("Message sent! I'll get back to you soon.");
-      setForm({ name: "", email: "", message: "" });
-    },
-    onError: () => {
-      toast.error("Something went wrong. Please try again.");
-    },
-  });
-
   const handleNavClick = (href: string) => {
     setActiveNav(href);
     setMenuOpen(false);
@@ -406,7 +380,17 @@ export default function App() {
       toast.error("Please fill in all fields.");
       return;
     }
-    submitMutation.mutate(form);
+    setFormSending(true);
+    // Open mailto link as fallback (no backend on GitHub Pages)
+    window.location.href = `mailto:balajibattina327@gmail.com?subject=Portfolio Contact from ${encodeURIComponent(form.name)}&body=${encodeURIComponent(`${form.message}
+
+From: ${form.email}`)}`;
+    setTimeout(() => {
+      setFormSending(false);
+      setFormSent(true);
+      setForm({ name: "", email: "", message: "" });
+      toast.success("Opening your email client to send the message!");
+    }, 800);
   };
 
   return (
@@ -419,7 +403,7 @@ export default function App() {
     >
       <Toaster position="top-right" />
 
-      {/* Glowing cursor dot – desktop only */}
+      {/* Glowing cursor dot */}
       <div
         className="hidden md:block fixed pointer-events-none z-[9999]"
         style={{
@@ -436,7 +420,7 @@ export default function App() {
         }}
       />
 
-      {/* ── NAVIGATION ── */}
+      {/* NAVIGATION */}
       <header
         className={`sticky top-0 z-50 w-full nav-glass transition-all duration-300 ${
           scrolled ? "nav-glass-scrolled" : ""
@@ -450,17 +434,12 @@ export default function App() {
             B.Balaji
           </span>
 
-          {/* Desktop nav */}
-          <nav
-            className="nav-links hidden md:flex items-center gap-7"
-            aria-label="Main navigation"
-          >
+          <nav className="nav-links hidden md:flex items-center gap-7">
             {NAV_LINKS.map((link) => (
               <button
                 key={link.href}
                 onClick={() => handleNavClick(link.href)}
                 type="button"
-                data-ocid={`nav.${link.label.toLowerCase()}.link`}
                 className="text-sm font-medium relative pb-1 transition-colors duration-200"
                 style={{
                   color:
@@ -481,11 +460,9 @@ export default function App() {
             ))}
           </nav>
 
-          {/* Mobile hamburger */}
           <button
             type="button"
             aria-label="Toggle menu"
-            data-ocid="nav.menu.toggle"
             className="md:hidden flex flex-col gap-1.5 p-2"
             onClick={() => setMenuOpen((v) => !v)}
           >
@@ -499,7 +476,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Mobile menu */}
         <AnimatePresence>
           {menuOpen && (
             <motion.div
@@ -513,16 +489,12 @@ export default function App() {
                 borderTop: "1px solid oklch(0.22 0.024 200)",
               }}
             >
-              <nav
-                className="nav-links-mobile flex flex-col gap-0 px-6 py-4"
-                aria-label="Mobile navigation"
-              >
+              <nav className="flex flex-col gap-0 px-6 py-4">
                 {NAV_LINKS.map((link) => (
                   <button
                     key={link.href}
                     onClick={() => handleNavClick(link.href)}
                     type="button"
-                    data-ocid={`nav.mobile.${link.label.toLowerCase()}.link`}
                     className="text-sm font-medium text-left transition-colors py-3 border-b last:border-0"
                     style={{
                       color:
@@ -541,16 +513,12 @@ export default function App() {
         </AnimatePresence>
       </header>
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <section
         id="home"
-        className="relative min-h-screen flex items-center overflow-hidden hero-grid"
-        style={{
-          background:
-            "linear-gradient(135deg, oklch(0.11 0.018 200) 0%, oklch(0.14 0.022 200) 60%, oklch(0.12 0.018 200) 100%)",
-        }}
+        className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden hero-grid"
+        style={{ backgroundColor: "oklch(0.12 0.018 200)" }}
       >
-        {/* Floating particles */}
         {PARTICLES.map((p) => (
           <div
             key={p.id}
@@ -560,23 +528,22 @@ export default function App() {
               bottom: p.bottom,
               width: p.size,
               height: p.size,
-              opacity: p.opacity,
-              background: `oklch(0.62 0.12 ${p.hue})`,
-              animationDuration: p.duration,
               animationDelay: p.delay,
+              animationDuration: p.duration,
+              opacity: p.opacity,
+              backgroundColor: `oklch(0.62 0.12 ${p.hue})`,
             }}
           />
         ))}
 
-        {/* Glow orbs */}
         <div
           className="hero-orb"
           style={{
-            width: "600px",
-            height: "600px",
-            top: "-120px",
-            right: "-80px",
-            background: "oklch(0.62 0.12 195 / 0.08)",
+            width: "500px",
+            height: "500px",
+            top: "-100px",
+            right: "-100px",
+            background: "oklch(0.50 0.10 195 / 0.07)",
           }}
         />
         <div
@@ -598,7 +565,6 @@ export default function App() {
             className="flex flex-col md:flex-row items-center justify-between gap-12"
           >
             <div className="flex flex-col gap-7 max-w-2xl flex-1">
-              {/* Open to work badge */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -620,7 +586,6 @@ export default function App() {
                 </span>
               </motion.div>
 
-              {/* Hero name – letter stagger */}
               <h1
                 className="font-display leading-[0.92] tracking-tight"
                 style={{ fontSize: "clamp(64px, 9vw, 108px)" }}
@@ -663,7 +628,6 @@ export default function App() {
                 </span>
               </h1>
 
-              {/* Typewriter role */}
               <p
                 className="text-lg md:text-xl font-medium tracking-wide"
                 style={{ color: "oklch(0.62 0.016 200)", minHeight: "1.75rem" }}
@@ -675,7 +639,6 @@ export default function App() {
                 />
               </p>
 
-              {/* Stats row */}
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -704,7 +667,6 @@ export default function App() {
                 ))}
               </motion.div>
 
-              {/* CTA row */}
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -714,8 +676,7 @@ export default function App() {
                 <button
                   onClick={() => handleNavClick("#projects")}
                   type="button"
-                  data-ocid="hero.primary_button"
-                  className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:shadow-teal-glow hover:scale-[1.03] active:scale-95"
+                  className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.03] active:scale-95"
                   style={{
                     backgroundColor: "oklch(0.62 0.12 195)",
                     color: "oklch(0.11 0.018 200)",
@@ -727,8 +688,7 @@ export default function App() {
                 <button
                   onClick={() => handleNavClick("#contact")}
                   type="button"
-                  data-ocid="hero.secondary_button"
-                  className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm border transition-all duration-200 hover:border-teal hover:text-portfolio-teal"
+                  className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm border transition-all duration-200"
                   style={{
                     border: "1px solid oklch(0.30 0.028 200)",
                     color: "oklch(0.68 0.016 200)",
@@ -739,8 +699,7 @@ export default function App() {
                 <a
                   href="/assets/uploads/final_cv_balaji_drcode-019d2aaf-08d0-72cb-8cca-c96914591c06-1.pdf"
                   download
-                  data-ocid="hero.download_button"
-                  className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm border transition-all duration-200 hover:border-teal hover:text-portfolio-teal"
+                  className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm border transition-all duration-200"
                   style={{
                     border: "1px solid oklch(0.62 0.12 195 / 0.40)",
                     color: "oklch(0.62 0.12 195)",
@@ -759,7 +718,6 @@ export default function App() {
               transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
               className="hidden md:flex flex-shrink-0 items-center justify-center"
             >
-              {/* Outer glow ring with pulse */}
               <div
                 className="ring-pulse absolute rounded-full"
                 style={{
@@ -785,7 +743,6 @@ export default function App() {
                   alt="Battina Balaji"
                   className="w-full h-full rounded-full object-cover"
                 />
-                {/* Inner glow overlay */}
                 <div
                   className="absolute inset-0 rounded-full"
                   style={{
@@ -798,7 +755,6 @@ export default function App() {
           </motion.div>
         </div>
 
-        {/* Scroll cue */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -823,7 +779,7 @@ export default function App() {
         </motion.div>
       </section>
 
-      {/* ── ABOUT ── */}
+      {/* ABOUT */}
       <section
         id="about"
         className="py-24"
@@ -837,7 +793,6 @@ export default function App() {
             transition={{ duration: 0.6 }}
             className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center"
           >
-            {/* Left – bio */}
             <div>
               <p className="section-label">{"// About Me"}</p>
               <h2
@@ -893,7 +848,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right – stats panel with count-up */}
             <div
               className="rounded-2xl p-8 grid grid-cols-2 gap-5"
               style={{
@@ -972,7 +926,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── SKILLS ── */}
+      {/* SKILLS */}
       <section
         id="skills"
         className="py-24"
@@ -994,7 +948,6 @@ export default function App() {
               Skills &amp; Tools
             </h2>
           </motion.div>
-
           <div className="flex flex-col gap-5">
             {SKILLS.map((skill, i) => (
               <motion.div
@@ -1003,7 +956,6 @@ export default function App() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.08 }}
-                data-ocid={`skills.item.${i + 1}`}
                 className="flex flex-col py-4 px-5 rounded-xl"
                 style={{
                   background: "oklch(0.16 0.022 200)",
@@ -1042,9 +994,8 @@ export default function App() {
                     ))}
                   </div>
                 </div>
-                {/* Animated proficiency bar */}
                 <div
-                  className="mt-3 mx-0"
+                  className="mt-3"
                   style={{
                     height: "2px",
                     background: "oklch(0.22 0.024 200)",
@@ -1074,7 +1025,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── PROJECTS ── */}
+      {/* PROJECTS */}
       <section
         id="projects"
         className="py-24"
@@ -1096,12 +1047,10 @@ export default function App() {
               Selected Projects
             </h2>
           </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {PROJECTS.map((project, i) => (
               <div
                 key={project.title}
-                data-ocid={`projects.item.${i + 1}`}
                 style={{
                   transform: `perspective(800px) rotateX(${tilts[i].x}deg) rotateY(${tilts[i].y}deg)`,
                   transition: "transform 0.15s ease",
@@ -1116,16 +1065,13 @@ export default function App() {
                   transition={{ duration: 0.5, delay: i * 0.1 }}
                   className="project-card rounded-2xl overflow-hidden flex flex-col h-full"
                 >
-                  {/* Gradient accent strip */}
                   <div
                     style={{
                       height: "4px",
                       background: `linear-gradient(90deg, oklch(0.62 0.12 ${project.accentHue}), oklch(0.50 0.10 ${project.accentHue + 20}))`,
                     }}
                   />
-
                   <div className="p-6 flex flex-col gap-4 flex-1 relative">
-                    {/* Project number watermark */}
                     <span
                       className="absolute top-4 right-5 font-display font-black select-none pointer-events-none"
                       style={{
@@ -1136,8 +1082,6 @@ export default function App() {
                     >
                       {project.number}
                     </span>
-
-                    {/* Date badge */}
                     <span
                       className="text-xs font-medium px-2.5 py-1 rounded-full self-start"
                       style={{
@@ -1148,14 +1092,12 @@ export default function App() {
                     >
                       {project.date}
                     </span>
-
                     <h3
                       className="font-display font-bold text-base leading-snug pr-10"
                       style={{ color: "oklch(0.92 0.006 200)" }}
                     >
                       {project.title}
                     </h3>
-
                     <div className="flex flex-wrap gap-1.5">
                       {project.tech.map((t) => (
                         <span
@@ -1171,23 +1113,19 @@ export default function App() {
                         </span>
                       ))}
                     </div>
-
                     <p
                       className="text-sm leading-relaxed flex-1"
                       style={{ color: "oklch(0.56 0.014 200)" }}
                     >
                       {project.description}
                     </p>
-
-                    {/* Action buttons */}
                     <div className="flex gap-2 mt-1 flex-wrap">
                       {project.demo && (
                         <a
                           href={project.demo}
                           target="_blank"
                           rel="noopener noreferrer"
-                          data-ocid={`projects.demo.button.${i + 1}`}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:opacity-90 hover:shadow-teal-glow"
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:opacity-90"
                           style={{
                             background: `oklch(0.62 0.12 ${project.accentHue})`,
                             color: "oklch(0.10 0.012 200)",
@@ -1200,8 +1138,7 @@ export default function App() {
                         href={project.github}
                         target="_blank"
                         rel="noopener noreferrer"
-                        data-ocid={`projects.github.button.${i + 1}`}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border transition-all duration-200 hover:border-portfolio-teal"
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border transition-all duration-200"
                         style={{
                           borderColor: "oklch(0.28 0.028 200)",
                           color: "oklch(0.62 0.014 200)",
@@ -1218,7 +1155,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── CERTIFICATES & ACHIEVEMENTS ── */}
+      {/* CERTIFICATES & ACHIEVEMENTS */}
       <section
         id="certificates"
         className="py-24"
@@ -1240,9 +1177,7 @@ export default function App() {
               Certificates &amp; Achievements
             </h2>
           </motion.div>
-
           <div className="flex flex-col gap-10">
-            {/* Certificates */}
             <div>
               <h3
                 className="text-xs font-semibold uppercase tracking-wider mb-5 flex items-center gap-2"
@@ -1259,7 +1194,6 @@ export default function App() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.4, delay: i * 0.08 }}
-                    data-ocid={`certificates.item.${i + 1}`}
                     className="cert-card rounded-r-xl p-4"
                   >
                     <p
@@ -1308,7 +1242,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Achievements */}
             <div>
               <h3
                 className="text-xs font-semibold uppercase tracking-wider mb-5 flex items-center gap-2"
@@ -1325,7 +1258,6 @@ export default function App() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.4, delay: i * 0.08 }}
-                    data-ocid={`achievements.item.${i + 1}`}
                     className="achievement-card rounded-xl p-5 flex items-start gap-4"
                   >
                     <div
@@ -1360,7 +1292,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── EDUCATION ── */}
+      {/* EDUCATION */}
       <section
         id="education"
         className="py-24"
@@ -1382,10 +1314,7 @@ export default function App() {
               Education
             </h2>
           </motion.div>
-
-          {/* Timeline */}
           <div className="relative pl-8">
-            {/* Animated connecting line */}
             <motion.div
               initial={{ scaleY: 0 }}
               whileInView={{ scaleY: 1 }}
@@ -1394,7 +1323,6 @@ export default function App() {
               className="absolute left-3 top-2 bottom-2 w-px timeline-line"
               style={{ transformOrigin: "top" }}
             />
-
             <div className="flex flex-col gap-10">
               {EDUCATION.map((edu, i) => (
                 <motion.div
@@ -1403,10 +1331,8 @@ export default function App() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: i * 0.1 }}
-                  data-ocid={`education.item.${i + 1}`}
                   className="relative"
                 >
-                  {/* Node */}
                   <div
                     className="absolute -left-5 top-4 w-4 h-4 rounded-full border-2 flex items-center justify-center"
                     style={{
@@ -1428,16 +1354,11 @@ export default function App() {
                       />
                     )}
                   </div>
-
                   <div
                     className="rounded-2xl p-6 ml-2"
                     style={{
                       background: "oklch(0.16 0.022 200)",
-                      border: `1px solid ${
-                        i === 0
-                          ? "oklch(0.62 0.12 195 / 0.20)"
-                          : "oklch(0.22 0.024 200)"
-                      }`,
+                      border: `1px solid ${i === 0 ? "oklch(0.62 0.12 195 / 0.20)" : "oklch(0.22 0.024 200)"}`,
                     }}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1488,7 +1409,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── CONTACT ── */}
+      {/* CONTACT */}
       <section
         id="contact"
         className="py-24"
@@ -1498,7 +1419,6 @@ export default function App() {
         }}
       >
         <div className="max-w-[1200px] mx-auto px-6 md:px-8 grid grid-cols-1 md:grid-cols-2 gap-16 items-start">
-          {/* Left */}
           <motion.div
             initial={{ opacity: 0, x: -24 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -1523,8 +1443,6 @@ export default function App() {
               Have a project in mind? I'd love to hear about it. Whether it's an
               ML pipeline or a web application, let's talk.
             </p>
-
-            {/* Response time */}
             <div
               className="flex items-center gap-2 mb-8 text-sm"
               style={{ color: "oklch(0.60 0.012 200)" }}
@@ -1532,7 +1450,6 @@ export default function App() {
               <Clock size={14} style={{ color: "oklch(0.62 0.12 195)" }} />
               Typically responds within 24h
             </div>
-
             <div className="flex items-center gap-3">
               {[
                 {
@@ -1558,7 +1475,6 @@ export default function App() {
                     social.href.startsWith("mailto") ? undefined : "_blank"
                   }
                   rel="noopener noreferrer"
-                  data-ocid={`contact.${social.label.toLowerCase()}.link`}
                   aria-label={social.label}
                   className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-110"
                   style={{
@@ -1573,84 +1489,49 @@ export default function App() {
             </div>
           </motion.div>
 
-          {/* Right – form */}
           <motion.form
             initial={{ opacity: 0, x: 24 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
             onSubmit={handleSubmit}
-            className="flex flex-col gap-5"
-            data-ocid="contact.modal"
+            className="flex flex-col gap-4"
           >
-            <div>
-              <label
-                htmlFor="contact-name"
-                className="block text-xs font-semibold mb-2 tracking-wide uppercase"
-                style={{ color: "oklch(0.52 0.012 200)" }}
-              >
-                Name
-              </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
-                id="contact-name"
                 type="text"
-                placeholder="Battina Balaji"
+                placeholder="Your Name"
                 value={form.name}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, name: e.target.value }))
                 }
-                data-ocid="contact.name.input"
                 className="input-pro"
               />
-            </div>
-            <div>
-              <label
-                htmlFor="contact-email"
-                className="block text-xs font-semibold mb-2 tracking-wide uppercase"
-                style={{ color: "oklch(0.52 0.012 200)" }}
-              >
-                Email
-              </label>
               <input
-                id="contact-email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="Your Email"
                 value={form.email}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, email: e.target.value }))
                 }
-                data-ocid="contact.email.input"
                 className="input-pro"
               />
             </div>
-            <div>
-              <label
-                htmlFor="contact-message"
-                className="block text-xs font-semibold mb-2 tracking-wide uppercase"
-                style={{ color: "oklch(0.52 0.012 200)" }}
-              >
-                Message
-              </label>
-              <textarea
-                id="contact-message"
-                rows={5}
-                placeholder="Tell me about your project..."
-                value={form.message}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, message: e.target.value }))
-                }
-                data-ocid="contact.message.textarea"
-                className="input-pro resize-none"
-              />
-            </div>
-
+            <textarea
+              rows={5}
+              placeholder="Your Message"
+              value={form.message}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, message: e.target.value }))
+              }
+              className="input-pro resize-none"
+            />
             <AnimatePresence>
-              {submitMutation.isSuccess && (
+              {formSent && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  data-ocid="contact.success_state"
                   className="text-sm font-medium px-4 py-3 rounded-xl"
                   style={{
                     background: "oklch(0.25 0.06 160)",
@@ -1658,25 +1539,21 @@ export default function App() {
                     border: "1px solid oklch(0.40 0.10 160 / 0.4)",
                   }}
                 >
-                  ✓ Message sent! I'll get back to you within 24 hours.
+                  ✓ Email client opened! Send the email to reach me directly.
                 </motion.div>
               )}
             </AnimatePresence>
-
             <button
               type="submit"
-              disabled={submitMutation.isPending}
-              data-ocid="contact.submit_button"
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-semibold text-sm transition-all duration-200 hover:opacity-90 hover:shadow-teal-glow active:scale-[0.99] disabled:opacity-60"
+              disabled={formSending}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-semibold text-sm transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
               style={{
                 background: "oklch(0.62 0.12 195)",
                 color: "oklch(0.10 0.012 200)",
               }}
             >
-              {submitMutation.isPending ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" /> Sending...
-                </>
+              {formSending ? (
+                "Opening..."
               ) : (
                 <>
                   <Send size={15} /> Send Message
@@ -1687,7 +1564,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
+      {/* FOOTER */}
       <footer
         style={{
           backgroundColor: "oklch(0.10 0.016 200)",
@@ -1703,30 +1580,16 @@ export default function App() {
               Battina Balaji
             </p>
             <p className="text-xs" style={{ color: "oklch(0.40 0.010 200)" }}>
-              © {new Date().getFullYear()}.{" "}
-              <a
-                href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-                style={{ color: "oklch(0.52 0.10 195)" }}
-              >
-                Built with ♥ using caffeine.ai
-              </a>
+              © {new Date().getFullYear()}. Built with passion.
             </p>
           </div>
-
-          <nav
-            className="flex items-center gap-5"
-            aria-label="Footer navigation"
-          >
+          <nav className="flex items-center gap-5">
             {NAV_LINKS.map((link) => (
               <button
                 key={link.href}
                 onClick={() => handleNavClick(link.href)}
                 type="button"
-                data-ocid={`footer.${link.label.toLowerCase()}.link`}
-                className="text-xs font-medium transition-colors hover:text-portfolio-teal"
+                className="text-xs font-medium transition-colors"
                 style={{ color: "oklch(0.42 0.010 200)" }}
               >
                 {link.label}
